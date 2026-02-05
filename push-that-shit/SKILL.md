@@ -21,15 +21,78 @@ Extract identifiers like `VES-965`, `ves-965`, `DORA-123`, or branch names.
 
 ## Step 2: Determine Commit Type
 
-Check `$ARGUMENTS` to determine the commit type:
+### If argument is explicit
+Check `$ARGUMENTS` for explicit commit type:
 
 | Argument | Type | Use Case |
 |----------|------|----------|
 | `wip` | WIP commit | Context limit handoff, partial work |
 | `done` | Completion | All work finished, ready for review |
-| (none or phase name) | Phase commit | Normal phase completion |
 
-## Step 3: Gather Context
+### If no argument provided, infer commit type
+
+When no argument is provided, infer the commit type:
+
+1. **First, check existing PR status**:
+   ```bash
+   gh pr view --json isDraft 2>/dev/null
+   ```
+   - If PR exists and `isDraft: false` (already ready for review) → commit type is **`done`**
+   - If PR doesn't exist or is still draft → continue to step 2
+
+2. **Check TODO.md** - Read `~/tmp/dora-plans/{ticket-number}/TODO.md`:
+   - If ALL phases have all items marked `[x]` → infer **`done`**
+   - If only minor/chore items remain unmarked → use `AskUserQuestion` to ask if this is `done` or `wip`
+   - If significant work remains incomplete → infer **phase commit**
+
+3. **If still unclear** - Use `AskUserQuestion` tool to ask the user:
+   - "What type of commit is this?" with options: `done`, `wip`, `phase commit`
+
+## Step 3: Pre-Push Validation (only for `done`)
+
+**Skip this step** unless the commit type is `done` (PR ready for review).
+
+When marking PR ready for review, run validation commands to catch obvious errors before committing.
+
+### Detect Changed Projects
+
+Check which projects have modified files compared to the base branch:
+```bash
+git diff --name-only origin/main...HEAD
+# Also include uncommitted changes:
+git diff --name-only
+git diff --name-only --cached
+```
+
+Map changed files to projects:
+- `packages/protocol/**` → protocol
+- `apps/backoffice/**` → backoffice
+- `apps/web/**` → web
+- `apps/api/**` → api
+
+### Run Validation Commands
+
+For each detected project with changes, run format + lint commands. Format commands auto-fix issues; lint/typecheck catch errors.
+
+| Project | Commands to Run |
+|---------|-----------------|
+| protocol | `moonx protocol:format` |
+| backoffice | `moonx backoffice:format && moonx backoffice:lint && moonx backoffice:typecheck` |
+| web | `moonx web:format && moonx web:lint && moonx web:typecheck` |
+| api | `moonx api:lint` |
+
+### Handle Validation Results
+
+1. **If lint/typecheck fails**: Report the errors to the user and ask whether to:
+   - Fix the issues and retry
+   - Push anyway (not recommended)
+   - Abort the push
+
+2. **If all validations pass**: Proceed to the next step.
+
+Note: Format changes will be included in the commit created in Step 5.
+
+## Step 4: Gather Context
 
 ### Check Git Status
 ```bash
@@ -52,7 +115,7 @@ From TODO.md, identify:
 - Current phase in progress
 - Remaining work
 
-## Step 4: Create Commit
+## Step 5: Create Commit
 
 ### For Phase Completion (default)
 Stage specific files related to the phase work:
@@ -92,7 +155,7 @@ EOF
 ```
 
 ### For Completion Commit (argument: `done`)
-Stage all changes:
+Stage all changes (including any formatting fixes from Step 3):
 ```bash
 git add -A
 ```
@@ -109,14 +172,14 @@ EOF
 
 **IMPORTANT**: Do NOT include any co-author credit in commit messages.
 
-## Step 5: Push to Remote
+## Step 6: Push to Remote
 
 Push the branch:
 ```bash
 git push -u origin HEAD
 ```
 
-## Step 6: Manage PR
+## Step 7: Manage PR
 
 ### Check PR Status
 ```bash
@@ -175,7 +238,7 @@ Optionally update PR title to indicate WIP status (if not already):
 gh pr edit --title "WIP: {ticket-number}: {description}"
 ```
 
-## Step 7: Report Results
+## Step 8: Report Results
 
 Summarize what was done:
 - Commit hash and message summary
@@ -205,6 +268,7 @@ Summarize what was done:
 ```
 /push-that-shit done
 ```
+→ Runs format/lint/typecheck on changed projects
 → Creates commit: `feat: complete VES-965 GPU utilization metrics`
 → Pushes to origin
 → Marks PR ready for review
