@@ -45,7 +45,7 @@ Summarize briefly: "Resuming from Phase X, item Y" or "Starting fresh from Phase
 
 ## Step 4: Spawn Execution Agent
 
-Use the Task tool to spawn an agent with the following prompt structure.
+Use the Task tool to spawn an agent with `max_turns: 50` and the following prompt structure.
 
 **IMPORTANT**: Replace `{plan_files_dir}` with the actual absolute path (e.g., `/Users/suckzoo/tmp/dora-plans/ves-965`).
 
@@ -101,27 +101,16 @@ You MUST update these files to track your progress. Use these EXACT paths:
      - Edit `{plan_files_dir}/TODO.md` to mark Phase 1 items as `[x]`
      - THEN start Phase 2
 
-4. **MANDATORY: Checkpoint every 30-40 tool calls**:
-   - Count your tool usage. After approximately 30-40 tool calls, STOP and:
-     - Update `{plan_files_dir}/TODO.md` with current progress
+4. **Turn counting (max 50 turns)**:
+   - You have a hard limit of 50 turns before being stopped automatically
+   - **Count your turns**: Start at turn 1. Each time you respond with tool calls, increment your count. Track this mentally (e.g., "Turn 12: implementing X...")
+   - **From turn 40 onwards**: Start wrapping up and save all progress:
+     - Update `{plan_files_dir}/TODO.md` with current progress and WIP notes
      - Update `{plan_files_dir}/DECISIONS.md` with any new decisions made
-   - Then continue working
-   - This ensures progress is never lost even if you hit context limits unexpectedly
+     - If blocked, update `{plan_files_dir}/BLOCKED.md`
+   - Return a handoff summary so the orchestrator can spawn a fresh agent to continue
 
-5. **MANDATORY: Context limit check (15% remaining = STOP)**:
-   - If you have less than 15% context remaining, you MUST STOP IMMEDIATELY
-   - Do NOT attempt to squeeze in more work
-   - Before stopping:
-     - Update `{plan_files_dir}/TODO.md` with current progress and any WIP notes
-     - Update `{plan_files_dir}/DECISIONS.md` with any new decisions
-     - Search Linear for the ticket (e.g., VES-965) using list_issues
-     - If found, add a comment to the Linear ticket with your progress:
-       - Which task/phase you started from
-       - Summary of what you accomplished
-       - What remains to be done
-     - Return a handoff summary to the orchestrator
-
-6. **Completion**: When all TODO items are done:
+5. **Completion**: When all TODO items are done:
    - Update `{plan_files_dir}/TODO.md` to mark ALL items as `[x]`
    - If Linear ticket exists, add a completion comment with summary of work
    - Return a summary of work completed to the orchestrator
@@ -174,12 +163,6 @@ When the agent returns, evaluate the result based on its report:
 ### If completed:
 1. Report the agent's summary to the user
 2. Suggest next steps (tests, PR, `/push-that-shit done`, etc.)
-
-## Step 6: Self Context Check
-
-If YOUR (orchestrator's) context is nearing limits:
-1. Ensure all plan files are up to date
-2. Inform user: "My context is getting full. Plan files are saved. You can start a new conversation and run `/do-that-shit {ticket}` to continue."
 
 ## File Update Conventions
 
