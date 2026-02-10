@@ -19,7 +19,9 @@ Determine the ticket/branch identifier:
 
 Extract identifiers like `VES-965`, `ves-965`, `DORA-123`, or branch names.
 
-## Step 2: Determine Commit Type
+## Step 2: Determine Commit Type (CRITICAL — drives the entire flow)
+
+**The commit type determines which subsequent steps execute.** In particular, `done` triggers pre-push validation (Step 3). You MUST resolve the commit type before proceeding to any later step.
 
 ### If argument is explicit
 Check `$ARGUMENTS` for explicit commit type:
@@ -48,17 +50,19 @@ When no argument is provided, infer the commit type:
 3. **If still unclear** - Use `AskUserQuestion` tool to ask the user:
    - "What type of commit is this?" with options: `done`, `wip`, `phase commit`
 
-## Step 3: Pre-Push Validation (only for `done`)
+## Step 3: Pre-Push Validation (only for `done`) — MANDATORY
 
 **Skip this step** unless the commit type is `done` (PR ready for review).
 
-When marking PR ready for review, run validation commands to catch obvious errors before committing.
+**IMPORTANT: This step MUST run whenever the commit type is `done`, even if there are no uncommitted changes.** The purpose is to validate the entire branch diff against the base branch, not just uncommitted work. A clean working tree does NOT mean the code is validated — lint, typecheck, and format checks must still run against the full set of changes introduced by this branch.
+
+When the commit type is `done`, run validation commands to catch obvious errors.
 
 ### Detect Changed Projects
 
-Check which projects have modified files compared to the base branch:
+Check which projects have modified files compared to the base branch(**IMPORTANT: base branch is `develop`**):
 ```bash
-git diff --name-only origin/main...HEAD
+git diff --name-only origin/develop...HEAD
 # Also include uncommitted changes:
 git diff --name-only
 git diff --name-only --cached
@@ -70,7 +74,19 @@ Map changed files to projects:
 - `apps/web/**` → web
 - `apps/api/**` → api
 
-### Run Validation Commands
+### Sub-step 3a: Run Codegen FIRST (if protocol changed) — DO NOT SKIP
+
+**CRITICAL: You MUST run this sub-step BEFORE any lint/format/typecheck commands.** If you skip codegen, lint will run against stale generated files and produce false results.
+
+**Check**: Do the changed files include anything under `packages/protocol/**`?
+- **YES** → Run codegen, then proceed to Sub-step 3b:
+  ```bash
+  moonx protocol:build --dependents
+  ```
+  This regenerates all dependent files (`*.gen.go`, `*.gen.ts`, `appUrls.gen.ts`). Lint/typecheck results are MEANINGLESS without this step when protocol files changed.
+- **NO** → Skip directly to Sub-step 3b.
+
+### Sub-step 3b: Run Validation Commands
 
 For each detected project with changes, run format + lint commands. Format commands auto-fix issues; lint/typecheck catch errors.
 
@@ -100,7 +116,7 @@ git status
 git diff --stat
 ```
 
-If there are no changes to commit, inform the user and skip to PR management.
+If there are no changes to commit, inform the user and skip Steps 5-6 (commit and push). **Do NOT skip Step 7 (PR management)** — the PR may still need description updates or status changes.
 
 ### Load Plan Files
 Read from `~/tmp/dora-plans/{ticket-number}/`:
