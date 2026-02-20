@@ -104,11 +104,7 @@ You MUST update these files to track your progress. Use these EXACT paths:
    - Example workflow:
      - Complete Phase 1 work
      - Edit `{plan_files_dir}/TODO.md` to mark Phase 1 items as `[x]`
-     - THEN start Phase 2
-
-3. **Completion**: Whenever you finish a phase:
-   - Update `{plan_files_dir}/TODO.md` to mark ALL items as `[x]`
-   - **MANDATORY** End your job. You MUST terminate your job.
+     - **MANDATORY** End your job. You MUST terminate your job.
 
 4. **Turn counting (max 50 turns)**:
    - You have a hard limit of 50 turns before being stopped automatically
@@ -142,9 +138,24 @@ You MUST update these files to track your progress. Use these EXACT paths:
 
 ---
 
+## ⛔ FINAL CHECKPOINT — DO NOT SKIP
+
+Before your VERY LAST tool call (the one after which you will return your final message), you MUST have completed ALL of the following file updates. If any are missing, do them NOW before terminating:
+
+| # | File | Action | How to verify |
+|---|------|--------|---------------|
+| 1 | `{plan_files_dir}/TODO.md` | Mark completed items `[x]`, add WIP notes for partial work | Read the file back and confirm it reflects actual git changes |
+| 2 | `{plan_files_dir}/DECISIONS.md` | Record any new decisions | Create file if it doesn't exist |
+| 3 | `{plan_files_dir}/HANDOFF.md` | Write summary of what you did and what's next | Must exist and be non-empty |
+| 4 | `{plan_files_dir}/BLOCKED.md` | Write if blocked, skip if not | Only if you're stopping due to a blocker |
+
+**Your work is NOT considered done until these files are updated. Code changes without file updates will be treated as lost progress.**
+
+---
+
 **REMEMBER**: The TODO.md file at `{plan_files_dir}/TODO.md` is your checkpoint system. If you don't update it, progress cannot be tracked or resumed. Treat updates as MANDATORY, not optional.
 
-**REMEMBER 2**: Rethink before you act: every turn, check if you must terminate or not. And DO NOT FORGET the INSTRUCTION 6.
+**REMEMBER 2**: Rethink before you act: every turn, check if you must terminate or not. And DO NOT FORGET the INSTRUCTION 6 and the FINAL CHECKPOINT above.
 
 ---
 
@@ -157,7 +168,11 @@ Start from: {current state assessment}
 
 When the agent finishes, evaluate the result based on its report (which is obviously HANDOFF.md):
 
-### First, push current changes with /push-that-shit:
+### First, verify agent updated its plan files:
+1. Read `{plan_files_dir}/HANDOFF.md` — if it's missing or unchanged from before the agent ran, the agent failed to save progress. Note this but proceed.
+2. Quick-check `{plan_files_dir}/TODO.md` — run `git diff --name-only` and compare against checked-off items. If TODO.md doesn't reflect the actual code changes, update it yourself before pushing.
+
+### Then, push current changes with /push-that-shit:
 1. You MUST USE the /push-that-shit skill.
 
 ### **IMPORTANT: check if blocked and needs clarification**:
