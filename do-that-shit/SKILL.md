@@ -96,20 +96,24 @@ You MUST update these files to track your progress. Use these EXACT paths:
    - **MANDATORY** End your job. You MUST terminate your job.
    - The orchestrator will handle the question and spawn a new agent with the answer
 
-2. **MANDATORY: Update TODO.md after EVERY phase**:
+2. **MANDATORY: Update TODO.md AND HANDOFF.md after EVERY phase**:
    - BEFORE starting work on a new phase, update `{plan_files_dir}/TODO.md` to mark the previous phase's items as complete
-   - This is NOT optional. Do NOT proceed to the next phase without updating the file first
+   - ALSO update `{plan_files_dir}/HANDOFF.md` with a running summary of what you've done so far and what's next
+   - This is NOT optional. Do NOT proceed to the next phase without updating BOTH files first
    - Mark completed items: `[x]`
    - Add WIP notes for partial work: `<!-- WIP: description of partial state -->`
    - Example workflow:
      - Complete Phase 1 work
      - Edit `{plan_files_dir}/TODO.md` to mark Phase 1 items as `[x]`
+     - Edit `{plan_files_dir}/HANDOFF.md` with current progress summary
      - **MANDATORY** End your job. You MUST terminate your job.
+   - **WHY**: Agents frequently get cut off at the turn limit without a chance to write final files. By updating HANDOFF.md after every phase, progress is never lost even if you're terminated unexpectedly.
 
 4. **Turn counting (max 50 turns)**:
    - You have a hard limit of 50 turns before being stopped automatically
    - **Count your turns**: Start at turn 1. Each time you respond with tool calls, increment your count. Track this mentally (e.g., "Turn 12: implementing X...")
-   - **From turn 40 onwards**: Start wrapping up and save all progress:
+   - **From turn 35 onwards**: Prioritize saving progress. After completing your current unit of work, update TODO.md and HANDOFF.md immediately.
+   - **From turn 40 onwards**: Stop new work. Use remaining turns ONLY to update plan files and terminate:
      - **MANDATORY** End your job. You MUST terminate your job.
 
 5. **MANDATORY: When the user rejects your tool call**:
@@ -169,8 +173,12 @@ Start from: {current state assessment}
 When the agent finishes, evaluate the result based on its report (which is obviously HANDOFF.md):
 
 ### First, verify agent updated its plan files:
-1. Read `{plan_files_dir}/HANDOFF.md` — if it's missing or unchanged from before the agent ran, the agent failed to save progress. Note this but proceed.
-2. Quick-check `{plan_files_dir}/TODO.md` — run `git diff --name-only` and compare against checked-off items. If TODO.md doesn't reflect the actual code changes, update it yourself before pushing.
+1. Read `{plan_files_dir}/HANDOFF.md` — if it's missing or unchanged from before the agent ran, the agent failed to save progress. In that case:
+   - Run `git diff --name-only` to see what files the agent actually changed
+   - Read `{plan_files_dir}/TODO.md` to check if at least that was updated
+   - If TODO.md was also not updated, reconstruct progress from `git diff --name-only` and update TODO.md yourself
+   - Write a minimal HANDOFF.md yourself based on the git diff (e.g., "Agent completed work on files X, Y, Z but failed to write handoff. TODO.md updated by orchestrator.")
+2. Quick-check `{plan_files_dir}/TODO.md` — compare checked-off items against `git diff --name-only`. If TODO.md doesn't reflect the actual code changes, update it yourself before pushing.
 
 ### Then, push current changes with /push-that-shit:
 1. You MUST USE the /push-that-shit skill.
